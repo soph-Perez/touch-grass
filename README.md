@@ -11,6 +11,14 @@ If you have not installed npm before, the first command won't work so you have t
 npm install
 ```
 
+## Important
+**DO NOT PUSH TO MAIN**
+Create feature branches with your name:
+For example:
+```bash
+added-maps-miguel
+```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Status
