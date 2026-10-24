@@ -6,14 +6,22 @@ Run the development server:
 ```bash
 npm run dev
 ```
-If you have not installed npm before, the first command won't work so you have to run:
-```bash
-npm install
-```
+If you have not installed npm before, the first command won't work. Follow these instructions:
+1. Go to VsCode and find the terminal tab
+2. Click "New Terminal"
+3. Cd into the right folder:
+  ```bash
+  cd mruhacks2026
+  ```
+4. Run the Install Command:
+  ```bash
+  npm install
+  ```
 
 ## Important
 **DO NOT PUSH TO MAIN**
 Create feature branches with your name:
+
 For example:
 ```bash
 added-maps-miguel
