@@ -6,7 +6,13 @@ export interface TrailResult {
   id: number | string;
   name: string;
   geometry: { type: "LineString"; coordinates: [number, number][] };
-  properties: { length_m?: number; difficulty?: string };
+  properties: {
+    length_m?: number;
+    difficulty?: string;
+    surface_class?: string;
+    Avg_Slope?: number | null; // percent incline
+    Max_Slope?: number | null; // percent incline
+  };
   distance_m: number | null;
 }
 

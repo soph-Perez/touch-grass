@@ -37,6 +37,15 @@ function formatLength(meters?: number): string {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
 }
 
+/** Soft color tint for the steepness line, keyed off the worst bit (max slope %). */
+function slopeColor(maxSlope?: number | null): string {
+  if (maxSlope === null || maxSlope === undefined) return "text-cream/70";
+  if (maxSlope < 5) return "text-[#9FD8AC]";
+  if (maxSlope < 10) return "text-[#EBD08A]";
+  if (maxSlope < 20) return "text-[#F2B09B]";
+  return "text-[#F28585]";
+}
+
 function TrailCard({
   trail,
   onClick,
@@ -44,6 +53,10 @@ function TrailCard({
   trail: TrailResult;
   onClick: () => void;
 }) {
+  const { Avg_Slope: avgSlope, Max_Slope: maxSlope, surface_class: surface } =
+    trail.properties;
+  const surfaceValid = surface && surface.trim().length > 0;
+
   return (
     <article
       onClick={onClick}
@@ -61,9 +74,22 @@ function TrailCard({
         {trail.distance_m !== null && ` · ${trail.distance_m} m from your marker`}
       </p>
 
-      <p className="mt-1 font-mono text-[10px] text-cream/40 group-hover:text-cream/60">
-        trail #{trail.id} · click to zoom
+      <p className={`mt-1 text-sm ${slopeColor(maxSlope ?? null)}`}>
+        Avg climb {avgSlope ?? "—"}% · Max {maxSlope ?? "—"}%
       </p>
+
+      <div className="mt-2 flex items-center justify-between gap-2">
+        {surfaceValid ? (
+          <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] capitalize text-cream/70">
+            {surface}
+          </span>
+        ) : (
+          <span />
+        )}
+        <span className="font-mono text-[10px] text-cream/40 group-hover:text-cream/60">
+          trail #{trail.id} · click to zoom
+        </span>
+      </div>
     </article>
   );
 }
