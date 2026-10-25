@@ -110,6 +110,12 @@ function TrailFocusZoom({
   // card click (`focus`), not to identity churn from unrelated re-renders.
   const resultsRef = useRef(results);
 
+  // Mirror the latest results into the ref (identity is memoized upstream,
+  // so this runs only when a search actually completes).
+  useEffect(() => {
+    resultsRef.current = results;
+  }, [results]);
+
   useEffect(() => {
     if (!focus) return;
 
