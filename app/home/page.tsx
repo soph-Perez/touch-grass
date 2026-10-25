@@ -6,34 +6,79 @@ import Filters from "../components/Filters";
 import Buttons from "../components/Buttons";
 import LengthSlider from "../components/LengthSlider";
 import MapLoader from "../components/MapLoader";
+import { DIFFICULTY_TAGS, type TrailResult } from "../types";
+import { poeticName } from "../names";
+
+/** Trails shorter than this are never shown. */
+const MIN_TRAIL_LENGTH_M = 300;
+
+const DIFFICULTY_CHIP: Record<string, string> = {
+  easy: "bg-[#557D62] text-white",
+  moderate: "bg-[#E8B44A] text-[#35483B]",
+  hard: "bg-[#C4553B] text-white",
+};
+
+function Chip({ difficulty }: { difficulty?: string }) {
+  const key = difficulty?.toLowerCase() ?? "";
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+        DIFFICULTY_CHIP[key] ?? "bg-[#E2E2D8] text-[#536457]"
+      }`}
+    >
+      {key || "unrated"}
+    </span>
+  );
+}
+
+function formatLength(meters?: number): string {
+  if (meters === undefined) return "—";
+  return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`;
+}
+
+function TrailCard({ trail }: { trail: TrailResult }) {
+  return (
+    <article className="rounded-lg border border-[#E2E2D8] bg-[#FAF9F4] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="font-serif text-lg leading-snug text-[#35483B]">
+          {poeticName(String(trail.id))}
+        </h3>
+        <Chip difficulty={trail.properties.difficulty} />
+      </div>
+
+      <p className="mt-2 text-sm text-[#536457]">
+        {formatLength(trail.properties?.length_m)} long
+        {trail.distance_m !== null && ` · ${trail.distance_m} m from your marker`}
+      </p>
+
+      <p className="mt-1 font-mono text-[10px] text-[#7A8578]">
+        trail #{trail.id}
+      </p>
+    </article>
+  );
+}
 
 interface Coords {
   lat: number;
   lng: number;
 }
 
-interface SearchRequestSettings {
-  tags: string[];
-  match_mode: "all" | "any";
+interface SearchResponse {
+  count: number;
+  truncated: boolean;
+  message: string | null;
+  results: TrailResult[];
 }
-
-// Difficulty options in the Filters component mapped to backend tag ids.
-const DIFFICULTY_TAGS: Record<string, SearchRequestSettings> = {
-  Low: { tags: ["easy"], match_mode: "all" },
-  Mid: { tags: ["moderate"], match_mode: "all" },
-  High: { tags: ["hard"], match_mode: "all" },
-  All: { tags: ["easy", "moderate", "hard"], match_mode: "any" },
-};
 
 type RequestStatus = "idle" | "loading" | "error";
 
 export default function Journey() {
   const [difficulty, setDifficulty] = useState("Low");
-  const [radius, setRadius] = useState<number[]>([25]);
+  const [radius, setRadius] = useState<number[]>([2.5]);
   const [coords, setCoords] = useState<Coords | null>(null);
   const [backendUrl, setBackendUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<RequestStatus>("idle");
-  const [result, setResult] = useState<unknown>(null);
+  const [result, setResult] = useState<SearchResponse | null>(null);
 
   // Ask the Next server where the backend lives (see app/api/config).
   useEffect(() => {
@@ -72,7 +117,7 @@ export default function Journey() {
             },
             properties: { radius_m: radius[0] * 1000 },
           },
-          limit: 50,
+          limit: 500,
           match_mode,
         }),
       });
@@ -87,6 +132,9 @@ export default function Journey() {
   }
 
   const searchDisabled = !coords || !backendUrl || status === "loading";
+  const trails = result?.results.filter(
+    (trail) => (trail.properties.length_m ?? 0) >= MIN_TRAIL_LENGTH_M
+  ) ?? [];
 
   return (
     <main className="min-h-screen bg-cream p-6">
@@ -126,12 +174,16 @@ export default function Journey() {
         </section>
         <section className="flex gap-6">
           <div className="h-125 w-full flex-3">
-            <MapLoader onMarkerPlaced={setCoords} />
+            <MapLoader
+              onMarkerPlaced={setCoords}
+              results={trails}
+              radiusMeters={radius[0] * 1000}
+            />
           </div>
 
 
-        <aside className="rounded-xl border border-[#E2E2D8] bg-white p-5 flex-1">
-          <h2 className="mb-4 font-serif text-2xl text-forest">
+        <aside className="flex flex-1 flex-col rounded-xl border border-[#E2E2D8] bg-white p-5">
+          <h2 className="mb-4 shrink-0 font-serif text-2xl text-forest">
             Results
           </h2>
 
@@ -141,10 +193,18 @@ export default function Journey() {
               Search failed — make sure the backend is running (see console).
             </p>
           )}
-          {status === "idle" && result !== null && (
-            <pre className="max-h-96 overflow-auto whitespace-pre-wrap font-mono text-xs text-[#35483B]">
-              {JSON.stringify(result, null, 2)}
-            </pre>
+          {status === "idle" && result !== null && trails.length === 0 && (
+            <p className="text-[#536457]">
+              No trails over 300 m were found here. Try a larger radius or a
+              different difficulty.
+            </p>
+          )}
+          {status === "idle" && result !== null && trails.length > 0 && (
+            <div className="flex flex-col gap-3 overflow-y-auto">
+              {trails.map((trail) => (
+                <TrailCard key={String(trail.id)} trail={trail} />
+              ))}
+            </div>
           )}
         </aside>
         </section>

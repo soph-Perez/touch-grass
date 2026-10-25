@@ -27,9 +27,9 @@ export default function LengthSlider({
               : [...newValue]
           )
         }
-        min={1}
-        max={50}
-        step={1}
+        min={0.1}
+        max={5}
+        step={0.1}
         className="flex-1 cursor-pointer"
       />
 

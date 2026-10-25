@@ -1,17 +1,22 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   MapContainer,
+  Circle,
+  Polyline,
   TileLayer,
   LayersControl,
   Marker,
   Tooltip,
+  useMap,
   useMapEvents,
 } from "react-leaflet";
-import { divIcon, type LatLng } from "leaflet";
+import { divIcon, latLngBounds, type LatLng } from "leaflet";
 import type { LatLngExpression } from "leaflet";
+import type { TrailResult } from "../types";
+import { poeticName } from "../names";
 
 const { BaseLayer } = LayersControl;
 
@@ -58,9 +63,45 @@ function createDotIcon() {
 interface LeafletMapProps {
   /** Fires when a marker is placed (with its coords) or deleted (with null). */
   onMarkerPlaced?: (coords: { lat: number; lng: number } | null) => void;
+  /** Matching trails from the search response, drawn on the map. */
+  results?: TrailResult[];
+  /** How far from the marker the search reaches (meters). */
+  radiusMeters?: number;
 }
 
-export default function LeafletMap({ onMarkerPlaced }: LeafletMapProps) {
+/** Pan/zoom the map to show every matching trail after a search completes. */
+function FitResults({ results }: { results: TrailResult[] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (results.length === 0) return;
+
+    const bounds = latLngBounds([]);
+    for (const trail of results) {
+      for (const [lng, lat] of trail.geometry.coordinates) {
+        bounds.extend([lat, lng]);
+      }
+    }
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [24, 24] });
+    }
+  }, [results, map]);
+
+  return null;
+}
+
+/** Convert GeoJSON [lng, lat] pairs to Leaflet's [lat, lng] format. */
+function toLeafletCoords(
+  coordinates: [number, number][]
+): LatLngExpression[] {
+  return coordinates.map(([lng, lat]) => [lat, lng]);
+}
+
+export default function LeafletMap({
+  onMarkerPlaced,
+  results = [],
+  radiusMeters = 0,
+}: LeafletMapProps) {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [activeMarkerId, setActiveMarkerId] = useState<number | null>(null);
 
@@ -155,6 +196,35 @@ export default function LeafletMap({ onMarkerPlaced }: LeafletMapProps) {
         </LayersControl>
 
         <MapClickHandler onAddMarker={addMarker} />
+
+        <FitResults results={results} />
+
+        {results.map((trail) => (
+          <Polyline
+            key={String(trail.id)}
+            positions={toLeafletCoords(trail.geometry.coordinates)}
+            pathOptions={{ color: "#d946ef", weight: 4, opacity: 0.9 }}
+          >
+            <Tooltip direction="top" sticky>
+              {poeticName(String(trail.id))}
+              {trail.distance_m !== null && ` · ${trail.distance_m} m away`}
+            </Tooltip>
+          </Polyline>
+        ))}
+
+        {activeMarker && radiusMeters > 0 && (
+          <Circle
+            center={[activeMarker.lat, activeMarker.lng]}
+            radius={radiusMeters}
+            pathOptions={{
+              color: "#d946ef",
+              weight: 2,
+              dashArray: "6 8",
+              fillColor: "#d946ef",
+              fillOpacity: 0.08,
+            }}
+          />
+        )}
 
         {markers.map((marker) => (
           <Marker
