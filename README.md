@@ -16,7 +16,7 @@ git clone https://github.com/soph-Perez/touch-grass.git
 ### 2. Navigate Into the Project
 
 ```bash
-cd mruhacks2026
+cd touch-grass 
 ```
 
 ### 3. Install Dependencies (if installed, skip this step)
