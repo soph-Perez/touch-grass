@@ -1,7 +1,7 @@
-
 "use client";
 
 import dynamic from "next/dynamic";
+import type { TrailResult, TrailFocus } from "../types";
 
 const LeafletMap = dynamic(
   () => import("../components/Leaflet"),
@@ -15,6 +15,23 @@ const LeafletMap = dynamic(
   }
 );
 
-export default function MapLoader() {
-  return <LeafletMap />;
+export default function MapLoader({
+  onMarkerPlaced,
+  results,
+  radiusMeters,
+  focus,
+}: {
+  onMarkerPlaced?: (coords: { lat: number; lng: number } | null) => void;
+  results?: TrailResult[];
+  radiusMeters?: number;
+  focus?: TrailFocus | null;
+}) {
+  return (
+    <LeafletMap
+      onMarkerPlaced={onMarkerPlaced}
+      results={results}
+      radiusMeters={radiusMeters}
+      focus={focus}
+    />
+  );
 }

@@ -1,17 +1,22 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
+  Circle,
+  Polyline,
   TileLayer,
   LayersControl,
   Marker,
   Tooltip,
+  useMap,
   useMapEvents,
 } from "react-leaflet";
-import { divIcon, type LatLng } from "leaflet";
+import { divIcon, latLngBounds, type LatLng } from "leaflet";
 import type { LatLngExpression } from "leaflet";
+import type { TrailResult, TrailFocus } from "../types";
+import { poeticName } from "../names";
 
 const { BaseLayer } = LayersControl;
 
@@ -55,7 +60,94 @@ function createDotIcon() {
   });
 }
 
-export default function LeafletMap() {
+interface LeafletMapProps {
+  /** Fires when a marker is placed (with its coords) or deleted (with null). */
+  onMarkerPlaced?: (coords: { lat: number; lng: number } | null) => void;
+  /** Matching trails from the search response, drawn on the map. */
+  results?: TrailResult[];
+  /** How far from the marker the search reaches (meters). */
+  radiusMeters?: number;
+  /** Card-click zoom request from the results panel. */
+  focus?: TrailFocus | null;
+}
+
+/** Pan/zoom the map to show every matching trail after a search completes. */
+function FitResults({ results }: { results: TrailResult[] }) {
+  const map = useMap();
+  // The `results` array identity can churn on unrelated re-renders; only fit
+  // the camera when the list itself actually changes (i.e. a new search).
+  const fittedLength = useRef(0);
+
+  useEffect(() => {
+    if (results.length === fittedLength.current) return;
+    fittedLength.current = results.length;
+    if (results.length === 0) return;
+
+    const bounds = latLngBounds([]);
+    for (const trail of results) {
+      for (const [lng, lat] of trail.geometry.coordinates) {
+        bounds.extend([lat, lng]);
+      }
+    }
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [24, 24] });
+    }
+  }, [results, map]);
+
+  return null;
+}
+
+/** Zoom to a single trail when its result card is clicked. */
+function TrailFocusZoom({
+  focus,
+  results,
+}: {
+  focus: TrailFocus | null;
+  results: TrailResult[];
+}) {
+  const map = useMap();
+  // Keep the trail list in a ref so the zoom effect only reacts to a real
+  // card click (`focus`), not to identity churn from unrelated re-renders.
+  const resultsRef = useRef(results);
+
+  // Mirror the latest results into the ref (identity is memoized upstream,
+  // so this runs only when a search actually completes).
+  useEffect(() => {
+    resultsRef.current = results;
+  }, [results]);
+
+  useEffect(() => {
+    if (!focus) return;
+
+    const trail = resultsRef.current.find(
+      (entry) => String(entry.id) === focus.id
+    );
+    if (!trail) return;
+
+    const coords = latLngBounds(
+      trail.geometry.coordinates.map(([lng, lat]) => [lat, lng])
+    );
+    if (coords.isValid()) {
+      map.flyToBounds(coords, { padding: [40, 40], maxZoom: 17, duration: 0.8 });
+    }
+  }, [focus, map]);
+
+  return null;
+}
+
+/** Convert GeoJSON [lng, lat] pairs to Leaflet's [lat, lng] format. */
+function toLeafletCoords(
+  coordinates: [number, number][]
+): LatLngExpression[] {
+  return coordinates.map(([lng, lat]) => [lat, lng]);
+}
+
+export default function LeafletMap({
+  onMarkerPlaced,
+  results = [],
+  radiusMeters = 0,
+  focus = null,
+}: LeafletMapProps) {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [activeMarkerId, setActiveMarkerId] = useState<number | null>(null);
 
@@ -75,53 +167,54 @@ export default function LeafletMap() {
   ]);
 
   setActiveMarkerId(id);
+
+  onMarkerPlaced?.({ lat: position.lat, lng: position.lng });
 }
 
   function deleteMarker(id: number) {
     setMarkers((current) => current.filter((marker) => marker.id !== id));
 
     setActiveMarkerId((current) => (current === id ? null : current));
+
+    onMarkerPlaced?.(null);
   }
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl">
-      {/* Marker count and coordinates */}
-      <div className="absolute right-3 top-3 z-1000 max-w-[calc(100%-5rem)] rounded-xl border border-[#E2E2D8] bg-[#FAF9F4] px-4 py-3 shadow-md">
-        <div className="text-sm font-semibold text-[#35483B]">
-          {markers.length} {markers.length === 1 ? "marker" : "markers"}
-        </div>
-
+      {/* Compact coordinates + radius readout */}
+      <div className="absolute bottom-3 left-3 z-1000 rounded-lg border border-white/15 bg-[#0D1F17]/85 px-3 py-2 text-cream shadow-md backdrop-blur-sm">
         {activeMarker ? (
-          <div className="mt-2 space-y-1">
-            <div className="text-xs font-medium text-[#536457]">
-              Selected coordinates
+          <div className="font-mono text-[11px] leading-4">
+            <div>
+              {activeMarker.lat.toFixed(5)}, {activeMarker.lng.toFixed(5)}
             </div>
-
-            <div className="font-mono text-xs text-[#35483B]">
-              Lat: {activeMarker.lat.toFixed(6)}
+            <div className="text-cream/60">
+              {(radiusMeters / 1000).toFixed(1)} km radius
             </div>
-
-            <div className="font-mono text-xs text-[#35483B]">
-              Lng: {activeMarker.lng.toFixed(6)}
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigator.clipboard.writeText(
-                  `${activeMarker.lat}, ${activeMarker.lng}`
-                )
-              }
-              className="mt-1 rounded-full border border-[#C8CEC3] px-3 py-1 text-xs font-medium text-[#365D46] transition hover:bg-[#E9EEE5]"
-            >
-              Copy coordinates
-            </button>
           </div>
         ) : (
-          <div className="mt-1 text-xs text-[#7A8578]">
-            Click the map to add a marker
+          <div className="text-[11px] text-cream/70">
+            Click the map to place your marker
           </div>
         )}
+      </div>
+
+      {/* Legend */}
+      <div className="absolute bottom-9 right-3 z-1000 rounded-lg border border-white/15 bg-[#0D1F17]/85 px-3 py-2 shadow-md backdrop-blur-sm">
+        <div className="flex items-center gap-2 text-[11px] text-cream/85">
+          <span
+            className="inline-block h-[3px] w-5 rounded"
+            style={{ background: "#d946ef" }}
+          />
+          Matching trails
+        </div>
+        <div className="mt-1.5 flex items-center gap-2 text-[11px] text-cream/85">
+          <span
+            className="inline-block h-3 w-5 rounded border-2 border-dashed"
+            style={{ borderColor: "rgba(217, 70, 239, 0.55)" }}
+          />
+          Search reach
+        </div>
       </div>
 
       <MapContainer
@@ -143,9 +236,46 @@ export default function LeafletMap() {
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             />
           </BaseLayer>
+
+          <BaseLayer name="Dark Map">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            />
+          </BaseLayer>
         </LayersControl>
 
         <MapClickHandler onAddMarker={addMarker} />
+
+        <FitResults results={results} />
+        <TrailFocusZoom focus={focus} results={results} />
+
+        {results.map((trail) => (
+          <Polyline
+            key={String(trail.id)}
+            positions={toLeafletCoords(trail.geometry.coordinates)}
+            pathOptions={{ color: "#d946ef", weight: 4, opacity: 0.9 }}
+          >
+            <Tooltip direction="top" sticky>
+              {poeticName(String(trail.id))}
+              {trail.distance_m !== null && ` · ${trail.distance_m} m away`}
+            </Tooltip>
+          </Polyline>
+        ))}
+
+        {activeMarker && radiusMeters > 0 && (
+          <Circle
+            center={[activeMarker.lat, activeMarker.lng]}
+            radius={radiusMeters}
+            pathOptions={{
+              color: "#d946ef",
+              weight: 2,
+              dashArray: "6 8",
+              fillColor: "#d946ef",
+              fillOpacity: 0.08,
+            }}
+          />
+        )}
 
         {markers.map((marker) => (
           <Marker
@@ -169,7 +299,7 @@ export default function LeafletMap() {
                 const deleteButton =
                   markerElement?.querySelector(".marker-delete");
 
-                deleteButton?.addEventListener("click", (e) => {
+                deleteButton?.addEventListener("click", (e: Event) => {
                   e.preventDefault();
                   e.stopPropagation();
                   deleteMarker(marker.id);

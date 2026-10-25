@@ -14,8 +14,8 @@ export default function LengthSlider({
 }: LengthSliderProps) {
   return (
     <div className="flex w-full items-center gap-4">
-      <label className="shrink-0 text-2xl font-medium text-[#35483B]">
-        Radius (meters):
+      <label className="shrink-0 text-sm font-medium uppercase tracking-widest text-cream/60">
+        Radius (km):
       </label>
 
       <Slider
@@ -27,14 +27,14 @@ export default function LengthSlider({
               : [...newValue]
           )
         }
-        min={1}
-        max={50}
-        step={1}
+        min={0.1}
+        max={5}
+        step={0.1}
         className="flex-1 cursor-pointer"
       />
 
-      <span className="w-16 shrink-0 text-right text-sm text-[#536457]">
-        {value[0]} meters
+      <span className="w-16 shrink-0 text-right text-sm text-cream/80">
+        {value[0]} km
       </span>
     </div>
   );
