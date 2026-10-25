@@ -207,14 +207,7 @@ export default function LeafletMap({
         style={{ height: "100%", width: "100%" }}
       >
         <LayersControl position="topright">
-          <BaseLayer checked name="Dark Map">
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            />
-          </BaseLayer>
-
-          <BaseLayer name="City Map">
+          <BaseLayer checked name="City Map">
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -225,6 +218,13 @@ export default function LeafletMap({
             <TileLayer
               attribution="Imagery &copy; Esri, Maxar, Earthstar Geographics"
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            />
+          </BaseLayer>
+
+          <BaseLayer name="Dark Map">
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             />
           </BaseLayer>
         </LayersControl>
