@@ -55,7 +55,12 @@ function createDotIcon() {
   });
 }
 
-export default function LeafletMap() {
+interface LeafletMapProps {
+  /** Fires when a marker is placed (with its coords) or deleted (with null). */
+  onMarkerPlaced?: (coords: { lat: number; lng: number } | null) => void;
+}
+
+export default function LeafletMap({ onMarkerPlaced }: LeafletMapProps) {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [activeMarkerId, setActiveMarkerId] = useState<number | null>(null);
 
@@ -75,12 +80,16 @@ export default function LeafletMap() {
   ]);
 
   setActiveMarkerId(id);
+
+  onMarkerPlaced?.({ lat: position.lat, lng: position.lng });
 }
 
   function deleteMarker(id: number) {
     setMarkers((current) => current.filter((marker) => marker.id !== id));
 
     setActiveMarkerId((current) => (current === id ? null : current));
+
+    onMarkerPlaced?.(null);
   }
 
   return (
@@ -169,7 +178,7 @@ export default function LeafletMap() {
                 const deleteButton =
                   markerElement?.querySelector(".marker-delete");
 
-                deleteButton?.addEventListener("click", (e) => {
+                deleteButton?.addEventListener("click", (e: Event) => {
                   e.preventDefault();
                   e.stopPropagation();
                   deleteMarker(marker.id);

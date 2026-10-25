@@ -15,7 +15,7 @@ export default function LengthSlider({
   return (
     <div className="flex w-full items-center gap-4">
       <label className="shrink-0 text-2xl font-medium text-[#35483B]">
-        Radius (meters):
+        Radius (km):
       </label>
 
       <Slider
@@ -34,7 +34,7 @@ export default function LengthSlider({
       />
 
       <span className="w-16 shrink-0 text-right text-sm text-[#536457]">
-        {value[0]} meters
+        {value[0]} km
       </span>
     </div>
   );

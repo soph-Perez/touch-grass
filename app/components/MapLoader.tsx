@@ -15,6 +15,10 @@ const LeafletMap = dynamic(
   }
 );
 
-export default function MapLoader() {
-  return <LeafletMap />;
+export default function MapLoader({
+  onMarkerPlaced,
+}: {
+  onMarkerPlaced?: (coords: { lat: number; lng: number } | null) => void;
+}) {
+  return <LeafletMap onMarkerPlaced={onMarkerPlaced} />;
 }
