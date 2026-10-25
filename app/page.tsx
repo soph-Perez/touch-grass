@@ -8,11 +8,11 @@ export default function Home() {
   return (
     <div 
       className="flex flex-col min-h-screen justify-center items-center gap-6 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "radial-gradient(ellipse 55% 45% at center, rgba(5,25,10,0.75) 0%, rgba(5, 25, 10, 0.25) 50%, rgba(5, 25, 10, 0) 100%), url('/assets/home-bg.png')" }}>
+      style={{ backgroundImage: "radial-gradient(ellipse 55% 45% at center, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.25) 50%, rgba(255, 255, 255, 0) 100%), url('/assets/home-bg.png')" }}>
       <h1 className="title-rise title-gilded font-serif font-display text-6xl font-bold leading-none sm:text-8xl md:text-9xl">
         TOUCH GRASS
       </h1>
-      <p className="title-rise mb-6 font-display text-base tracking-[0.5em] text-gold sm:text-lg font-semibold">
+      <p className="title-rise mb-6 font-display text-base tracking-[0.5em] text-forest sm:text-lg font-semibold">
         Revitalize by going outside
       </p>
       <button 
