@@ -12,6 +12,7 @@
   --color-reggreen: #1f6b3a;
   --color-dusk: #0D1F17;
   --color-dusk-panel: #12291E;
+  --color-dusk-border: rgba(245, 240, 230, 0.14);
   --color-magenta: #d946ef;
   --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 }
@@ -181,4 +182,35 @@
   html {
     @apply font-sans;
   }
+  /* Dusk trailhead: override the shadcn white body everywhere. */
+  body {
+    background-color: var(--color-dusk);
+    color: var(--color-cream);
+  }
+}
+
+/* Dark Leaflet skin so the map never flashes or bleeds white. */
+.leaflet-container {
+  background: var(--color-dusk);
+}
+
+.leaflet-tooltip {
+  background: var(--color-dusk-panel);
+  color: var(--color-cream);
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.leaflet-tooltip-top::before {
+  border-top-color: var(--color-dusk-panel);
+}
+
+.leaflet-control-attribution {
+  background: rgba(13, 31, 23, 0.7) !important;
+  color: rgba(245, 240, 230, 0.6);
+  font-size: 10px;
+}
+
+.leaflet-control-attribution a {
+  color: var(--color-gold);
 }
