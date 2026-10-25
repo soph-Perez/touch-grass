@@ -134,32 +134,86 @@ export default function Journey() {
   async function search() {
     if (!coords || !backendUrl) return;
 
-    const { tags, match_mode } = DIFFICULTY_TAGS[difficulty] ?? DIFFICULTY_TAGS.Low;
+    const buildBody = (tags: string[], match_mode: "all" | "any") => ({
+      search_by: "tags" as const,
+      tags,
+      area: {
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          // GeoJSON order is [longitude, latitude]
+          coordinates: [coords.lng, coords.lat],
+        },
+        properties: { radius_m: radius[0] * 1000 },
+      },
+      limit: 500,
+      match_mode,
+    });
 
     setStatus("loading");
     try {
-      const res = await fetch(`${backendUrl}/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          search_by: "tags",
-          tags,
-          area: {
-            type: "Feature",
-            geometry: {
-              type: "Point",
-              // GeoJSON order is [longitude, latitude]
-              coordinates: [coords.lng, coords.lat],
-            },
-            properties: { radius_m: radius[0] * 1000 },
-          },
-          limit: 500,
-          match_mode,
-        }),
-      });
+      let response: SearchResponse;
 
-      if (!res.ok) throw new Error(`Search failed (${res.status})`);
-      setResult(await res.json());
+      if (difficulty === "All") {
+        // Query each difficulty separately and merge, so the backend's
+        // 500-result cap can't drop easy trails just because moderate/hard
+        // ones are closer (a shared cutoff would sample the union instead).
+        const settled = await Promise.allSettled(
+          DIFFICULTY_TAGS.All.tags.map((tag) =>
+            fetch(`${backendUrl}/search`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(buildBody([tag], "all")),
+            }).then(async (res) => {
+              if (!res.ok) throw new Error(`Search failed (${res.status})`);
+              return (await res.json()) as SearchResponse;
+            })
+          )
+        );
+
+        const landed = settled.filter(
+          (s): s is PromiseFulfilledResult<SearchResponse> =>
+            s.status === "fulfilled"
+        );
+        if (landed.length === 0) throw new Error("All search legs failed");
+
+        const seen = new Map<string, TrailResult>();
+        for (const leg of landed) {
+          for (const trail of leg.value.results) {
+            const key = String(trail.id);
+            if (!seen.has(key)) seen.set(key, trail);
+          }
+        }
+        const merged = [...seen.values()].sort(
+          (a, b) =>
+            (a.distance_m ?? Infinity) - (b.distance_m ?? Infinity) ||
+            String(a.id).localeCompare(String(b.id))
+        );
+
+        response = {
+          search_by: "tags",
+          tags: landed.flatMap((leg) => leg.value.tags),
+          count: merged.length,
+          truncated: false,
+          message:
+            landed.length < settled.length
+              ? "Some difficulty lookups failed; results may be partial."
+              : null,
+          results: merged,
+        };
+      } else {
+        const { tags, match_mode } =
+          DIFFICULTY_TAGS[difficulty] ?? DIFFICULTY_TAGS.Low;
+        const res = await fetch(`${backendUrl}/search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildBody(tags, match_mode)),
+        });
+        if (!res.ok) throw new Error(`Search failed (${res.status})`);
+        response = await res.json();
+      }
+
+      setResult(response);
       setStatus("idle");
     } catch (err) {
       console.error(err);
@@ -177,8 +231,8 @@ export default function Journey() {
   );
 
   return (
-    <main className="min-h-screen bg-dusk text-cream">
-      <header className="border-b border-dusk-border bg-gradient-to-r from-forest via-[#0F2419] to-dusk">
+    <main className="flex min-h-[100dvh] flex-col bg-dusk text-cream md:h-[100dvh] md:min-h-0 md:overflow-hidden">
+      <header className="shrink-0 border-b border-dusk-border bg-gradient-to-r from-forest via-[#0F2419] to-dusk">
         <div className="flex items-center justify-between px-6 py-4">
           <Link
             href="/"
@@ -195,12 +249,12 @@ export default function Journey() {
         </div>
       </header>
 
-      <div className="px-6 py-6">
-        <h1 className="mb-6 font-serif text-4xl text-cream md:text-5xl">
+      <div className="flex flex-1 min-h-0 flex-col px-6 py-6 md:overflow-y-auto">
+        <h1 className="mb-6 shrink-0 font-serif text-4xl text-cream md:text-5xl">
           Create an Adventure!
         </h1>
 
-        <section className="mb-5 rounded-xl border border-dusk-border bg-dusk-panel p-5">
+        <section className="mb-5 shrink-0 rounded-xl border border-dusk-border bg-dusk-panel p-5">
           <div className="flex flex-col gap-5">
             <Filters
               selected={difficulty}
@@ -227,8 +281,8 @@ export default function Journey() {
           </div>
         </section>
 
-        <section className="flex flex-col gap-6 md:flex-row lg:gap-8">
-          <div className="h-80 w-full overflow-hidden rounded-xl border border-dusk-border md:h-125 md:flex-[3]">
+        <section className="flex min-h-0 flex-1 flex-col gap-6 md:flex-row lg:gap-8">
+          <div className="h-80 w-full shrink-0 overflow-hidden rounded-xl border border-dusk-border md:h-auto md:min-h-0 md:flex-[3]">
             <MapLoader
               onMarkerPlaced={setCoords}
               results={trails}
@@ -237,7 +291,7 @@ export default function Journey() {
             />
           </div>
 
-          <aside className="relative flex flex-1 flex-col overflow-hidden rounded-xl border border-dusk-border bg-dusk-panel p-5">
+          <aside className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-dusk-border bg-dusk-panel p-5">
             <h2 className="mb-2 shrink-0 font-serif text-2xl text-gold">
               Results
             </h2>
