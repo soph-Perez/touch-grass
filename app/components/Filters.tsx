@@ -14,19 +14,20 @@ export default function Filters({
 }: FiltersProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="mr-2 text-2xl font-medium text-[#35483B]">
-        Difficulty:
+      <span className="mr-1 text-sm font-medium uppercase tracking-widest text-cream/60">
+        Difficulty
       </span>
 
       {difficulties.map((difficulty) => (
         <button
           key={difficulty}
           type="button"
+          aria-pressed={selected === difficulty}
           onClick={() => onChange(difficulty)}
-          className={`rounded-full border px-5 py-2 text-lg font-medium transition-colors duration-200 ${
+          className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors duration-200 ${
             selected === difficulty
-              ? "border-[#557D62] bg-[#557D62] text-white"
-              : "border-[#C8CEC3] bg-transparent text-[#35483B] hover:bg-[#E9EEE5]"
+              ? "border-[#557D62] bg-[#2F5D43] text-white shadow-[0_0_12px_rgba(85,125,98,0.35)]"
+              : "border-dusk-border bg-transparent text-cream/70 hover:bg-white/5 hover:text-cream"
           }`}
         >
           {difficulty}

@@ -30,11 +30,11 @@ function Slider({
       <SliderPrimitive.Control className="relative flex min-h-12 w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
         <SliderPrimitive.Track
           data-slot="slider-track"
-          className="relative grow overflow-hidden rounded-full bg-[#D9DED4] select-none data-horizontal:h-3 data-horizontal:w-full data-vertical:h-full data-vertical:w-3"
+          className="relative grow overflow-hidden rounded-full bg-white/10 select-none data-horizontal:h-3 data-horizontal:w-full data-vertical:h-full data-vertical:w-3"
         >
           <SliderPrimitive.Indicator
             data-slot="slider-range"
-            className="bg-[#365D46] select-none data-horizontal:h-full data-vertical:w-full"
+            className="bg-gold select-none data-horizontal:h-full data-vertical:w-full"
           />
         </SliderPrimitive.Track>
 
@@ -42,7 +42,7 @@ function Slider({
           <SliderPrimitive.Thumb
             data-slot="slider-thumb"
             key={index}
-            className="relative block size-7 shrink-0 rounded-full border-[3px] border-[#365D46] bg-white shadow-md ring-[#557D62]/30 transition-shadow select-none after:absolute after:-inset-2 hover:ring-4 focus-visible:ring-4 focus-visible:outline-none active:ring-4 disabled:pointer-events-none disabled:opacity-50"
+            className="relative block size-7 shrink-0 rounded-full border-[3px] border-gold bg-dusk shadow-md ring-gold/30 transition-shadow select-none after:absolute after:-inset-2 hover:ring-4 focus-visible:ring-4 focus-visible:outline-none active:ring-4 disabled:pointer-events-none disabled:opacity-50"
           />
         ))}
       </SliderPrimitive.Control>

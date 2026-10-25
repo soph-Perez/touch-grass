@@ -15,7 +15,7 @@ import {
 } from "react-leaflet";
 import { divIcon, latLngBounds, type LatLng } from "leaflet";
 import type { LatLngExpression } from "leaflet";
-import type { TrailResult } from "../types";
+import type { TrailResult, TrailFocus } from "../types";
 import { poeticName } from "../names";
 
 const { BaseLayer } = LayersControl;
@@ -67,6 +67,8 @@ interface LeafletMapProps {
   results?: TrailResult[];
   /** How far from the marker the search reaches (meters). */
   radiusMeters?: number;
+  /** Card-click zoom request from the results panel. */
+  focus?: TrailFocus | null;
 }
 
 /** Pan/zoom the map to show every matching trail after a search completes. */
@@ -90,6 +92,33 @@ function FitResults({ results }: { results: TrailResult[] }) {
   return null;
 }
 
+/** Zoom to a single trail when its result card is clicked. */
+function TrailFocusZoom({
+  focus,
+  results,
+}: {
+  focus: TrailFocus | null;
+  results: TrailResult[];
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!focus) return;
+
+    const trail = results.find((entry) => String(entry.id) === focus.id);
+    if (!trail) return;
+
+    const coords = latLngBounds(
+      trail.geometry.coordinates.map(([lng, lat]) => [lat, lng])
+    );
+    if (coords.isValid()) {
+      map.flyToBounds(coords, { padding: [40, 40], maxZoom: 17, duration: 0.8 });
+    }
+  }, [focus, results, map]);
+
+  return null;
+}
+
 /** Convert GeoJSON [lng, lat] pairs to Leaflet's [lat, lng] format. */
 function toLeafletCoords(
   coordinates: [number, number][]
@@ -101,6 +130,7 @@ export default function LeafletMap({
   onMarkerPlaced,
   results = [],
   radiusMeters = 0,
+  focus = null,
 }: LeafletMapProps) {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [activeMarkerId, setActiveMarkerId] = useState<number | null>(null);
@@ -135,43 +165,40 @@ export default function LeafletMap({
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-xl">
-      {/* Marker count and coordinates */}
-      <div className="absolute right-3 top-3 z-1000 max-w-[calc(100%-5rem)] rounded-xl border border-[#E2E2D8] bg-[#FAF9F4] px-4 py-3 shadow-md">
-        <div className="text-sm font-semibold text-[#35483B]">
-          {markers.length} {markers.length === 1 ? "marker" : "markers"}
-        </div>
-
+      {/* Compact coordinates + radius readout */}
+      <div className="absolute bottom-3 left-3 z-1000 rounded-lg border border-white/15 bg-[#0D1F17]/85 px-3 py-2 text-cream shadow-md backdrop-blur-sm">
         {activeMarker ? (
-          <div className="mt-2 space-y-1">
-            <div className="text-xs font-medium text-[#536457]">
-              Selected coordinates
+          <div className="font-mono text-[11px] leading-4">
+            <div>
+              {activeMarker.lat.toFixed(5)}, {activeMarker.lng.toFixed(5)}
             </div>
-
-            <div className="font-mono text-xs text-[#35483B]">
-              Lat: {activeMarker.lat.toFixed(6)}
+            <div className="text-cream/60">
+              {(radiusMeters / 1000).toFixed(1)} km radius
             </div>
-
-            <div className="font-mono text-xs text-[#35483B]">
-              Lng: {activeMarker.lng.toFixed(6)}
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigator.clipboard.writeText(
-                  `${activeMarker.lat}, ${activeMarker.lng}`
-                )
-              }
-              className="mt-1 rounded-full border border-[#C8CEC3] px-3 py-1 text-xs font-medium text-[#365D46] transition hover:bg-[#E9EEE5]"
-            >
-              Copy coordinates
-            </button>
           </div>
         ) : (
-          <div className="mt-1 text-xs text-[#7A8578]">
-            Click the map to add a marker
+          <div className="text-[11px] text-cream/70">
+            Click the map to place your marker
           </div>
         )}
+      </div>
+
+      {/* Legend */}
+      <div className="absolute bottom-9 right-3 z-1000 rounded-lg border border-white/15 bg-[#0D1F17]/85 px-3 py-2 shadow-md backdrop-blur-sm">
+        <div className="flex items-center gap-2 text-[11px] text-cream/85">
+          <span
+            className="inline-block h-[3px] w-5 rounded"
+            style={{ background: "#d946ef" }}
+          />
+          Matching trails
+        </div>
+        <div className="mt-1.5 flex items-center gap-2 text-[11px] text-cream/85">
+          <span
+            className="inline-block h-3 w-5 rounded border-2 border-dashed"
+            style={{ borderColor: "rgba(217, 70, 239, 0.55)" }}
+          />
+          Search reach
+        </div>
       </div>
 
       <MapContainer
@@ -198,6 +225,7 @@ export default function LeafletMap({
         <MapClickHandler onAddMarker={addMarker} />
 
         <FitResults results={results} />
+        <TrailFocusZoom focus={focus} results={results} />
 
         {results.map((trail) => (
           <Polyline

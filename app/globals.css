@@ -10,6 +10,10 @@
   --color-forest: #1B4332;
   --color-gold: #D4AF37;
   --color-reggreen: #1f6b3a;
+  --color-dusk: #0D1F17;
+  --color-dusk-panel: #12291E;
+  --color-magenta: #d946ef;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
 /* Transition of title rising at beginning */
