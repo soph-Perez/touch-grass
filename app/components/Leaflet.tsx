@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MapContainer,
   Circle,
@@ -74,8 +74,13 @@ interface LeafletMapProps {
 /** Pan/zoom the map to show every matching trail after a search completes. */
 function FitResults({ results }: { results: TrailResult[] }) {
   const map = useMap();
+  // The `results` array identity can churn on unrelated re-renders; only fit
+  // the camera when the list itself actually changes (i.e. a new search).
+  const fittedLength = useRef(0);
 
   useEffect(() => {
+    if (results.length === fittedLength.current) return;
+    fittedLength.current = results.length;
     if (results.length === 0) return;
 
     const bounds = latLngBounds([]);
@@ -101,11 +106,16 @@ function TrailFocusZoom({
   results: TrailResult[];
 }) {
   const map = useMap();
+  // Keep the trail list in a ref so the zoom effect only reacts to a real
+  // card click (`focus`), not to identity churn from unrelated re-renders.
+  const resultsRef = useRef(results);
 
   useEffect(() => {
     if (!focus) return;
 
-    const trail = results.find((entry) => String(entry.id) === focus.id);
+    const trail = resultsRef.current.find(
+      (entry) => String(entry.id) === focus.id
+    );
     if (!trail) return;
 
     const coords = latLngBounds(
@@ -114,7 +124,7 @@ function TrailFocusZoom({
     if (coords.isValid()) {
       map.flyToBounds(coords, { padding: [40, 40], maxZoom: 17, duration: 0.8 });
     }
-  }, [focus, results, map]);
+  }, [focus, map]);
 
   return null;
 }

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Filters from "../components/Filters";
 import Buttons from "../components/Buttons";
@@ -142,9 +142,13 @@ export default function Journey() {
   }
 
   const searchDisabled = !coords || !backendUrl || status === "loading";
-  const trails = result?.results.filter(
-    (trail) => (trail.properties.length_m ?? 0) >= MIN_TRAIL_LENGTH_M
-  ) ?? [];
+  const trails = useMemo(
+    () =>
+      result?.results.filter(
+        (trail) => (trail.properties.length_m ?? 0) >= MIN_TRAIL_LENGTH_M
+      ) ?? [],
+    [result]
+  );
 
   return (
     <main className="min-h-screen bg-dusk text-cream">
